@@ -388,7 +388,7 @@
   })();
 
   /* =========================================================
-     ۳ | بینایی ـ شنیداری: ببین، بشنو، تکرار کن
+     ۳ | ادراک بینایی: ببین، بشنو، تکرار کن
      ========================================================= */
   (function simon() {
     const board = $('#simon');
@@ -457,7 +457,141 @@
   })();
 
   /* =========================================================
-     ۴ | مهارت‌های اجتماعی: کارت‌های احساس
+     ۴ | پردازش شنیداری: ریتم را تکرار کن
+     ========================================================= */
+  (function rhythm() {
+    const drum = $('#drum');
+    if (!drum) return;
+    const tapsBox = $('#taps');
+    const status = $('#rhythmStatus');
+    const playBtn = $('#rhythmPlay');
+
+    const SHORT = 340, LONG = 760;      // فاصله‌ی کوتاه و بلند میان ضربه‌ها
+    const SPLIT = (SHORT + LONG) / 2;   // مرز تشخیص کوتاه از بلند
+    const PATTERNS = [
+      [SHORT, SHORT],
+      [SHORT, LONG, SHORT],
+      [LONG, SHORT, SHORT, LONG]
+    ];
+
+    let level = 0, taps = [], listening = false, quietTimer = null, playTimers = [];
+
+    const beat = () => tone(170, 0.13, 'triangle');
+    const shape = (gaps) => gaps.map((g) => (g < SPLIT ? 'ک' : 'ب')).join('');
+
+    // نمایش ضربه‌ها به‌صورت نقطه؛ نقطه‌ی پس از فاصله‌ی بلند کشیده‌تر است
+    function renderDots(gaps, count) {
+      tapsBox.innerHTML = '';
+      for (let i = 0; i < count; i++) {
+        const d = document.createElement('i');
+        d.className = 'on' + (i > 0 && gaps[i - 1] >= SPLIT ? ' long' : '');
+        tapsBox.appendChild(d);
+      }
+    }
+
+    function stopTimers() {
+      playTimers.forEach(clearTimeout);
+      playTimers = [];
+      clearTimeout(quietTimer);
+    }
+
+    function play() {
+      stopTimers();
+      listening = false;
+      taps = [];
+      tapsBox.innerHTML = '';
+      drum.disabled = true;
+      drum.classList.add('is-playing');
+      status.textContent = 'فقط گوش کن…';
+
+      const pattern = PATTERNS[level];
+      let t = 300;
+      playTimers.push(setTimeout(beat, t));
+      pattern.forEach((gap) => {
+        t += gap;
+        playTimers.push(setTimeout(beat, t));
+      });
+
+      playTimers.push(setTimeout(() => {
+        drum.classList.remove('is-playing');
+        drum.disabled = false;
+        listening = true;
+        status.textContent = 'حالا نوبت توست، بزن!';
+      }, t + 450));
+    }
+
+    function evaluate() {
+      listening = false;
+      drum.disabled = true;
+      clearTimeout(quietTimer);
+
+      const pattern = PATTERNS[level];
+      const gaps = taps.slice(1).map((t, i) => t - taps[i]);
+
+      if (gaps.length !== pattern.length) {
+        status.textContent = `تعداد ضربه‌ها ${fa(pattern.length + 1)} تا بود؛ دوباره گوش کن`;
+        tone(160, 0.3, 'sawtooth');
+        playBtn.textContent = 'پخش دوباره';
+        setTimeout(() => renderDots(pattern, pattern.length + 1), 600);
+        return;
+      }
+
+      if (shape(gaps) === shape(pattern)) {
+        tone(880, 0.24, 'triangle');
+        level++;
+        if (level >= PATTERNS.length) {
+          level = 0;
+          status.textContent = 'عالی بود! همه‌ی ریتم‌ها را درست زدی 🎉';
+          playBtn.textContent = 'از اول';
+          celebrate(drum);
+        } else {
+          status.textContent = 'آفرین! ریتم سخت‌تر…';
+          playTimers.push(setTimeout(play, 1100));
+        }
+      } else {
+        status.textContent = 'نزدیک بود! ریتم درست این بود';
+        tone(200, 0.26, 'sawtooth');
+        playBtn.textContent = 'پخش دوباره';
+        setTimeout(() => renderDots(pattern, pattern.length + 1), 600);
+      }
+    }
+
+    function hit() {
+      if (!listening) return;
+      beat();
+      drum.classList.add('is-hit');
+      setTimeout(() => drum.classList.remove('is-hit'), 130);
+
+      taps.push(performance.now());
+      const gaps = taps.slice(1).map((t, i) => t - taps[i]);
+      renderDots(gaps, taps.length);
+
+      // به‌محض کامل شدن تعداد ضربه‌ها نتیجه اعلام می‌شود
+      if (taps.length >= PATTERNS[level].length + 1) return evaluate();
+      clearTimeout(quietTimer);
+      quietTimer = setTimeout(evaluate, 1600);   // اگر ضربه‌ها کم بود، با سکوت تمام می‌شود
+    }
+
+    drum.addEventListener('pointerdown', hit);
+    drum.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); hit(); }
+    });
+    playBtn.addEventListener('click', play);
+
+    // با خروج از بخش، صدا و زمان‌سنج‌ها متوقف شوند
+    new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) return;
+        stopTimers();
+        listening = false;
+        drum.disabled = true;
+        drum.classList.remove('is-playing');
+      });
+    }, { root: scroller, threshold: 0.2 }).observe(drum);
+  })();
+
+  /* =========================================================
+     ۵ | مهارت‌های اجتماعی: کارت‌های احساس
      ========================================================= */
   (function feelings() {
     const wrap = $('#flips');
@@ -509,7 +643,7 @@
   })();
 
   /* =========================================================
-     ۵ | بازی‌درمانی: ترکاندن حباب
+     ۶ | بازی‌درمانی: ترکاندن حباب
      ========================================================= */
   (function bubbles() {
     const box = $('#bubbles');
@@ -560,7 +694,7 @@
   })();
 
   /* =========================================================
-     ۶ | درکی ـ حرکتی: هر شکل سر جای خودش
+     ۷ | درکی ـ حرکتی: هر شکل سر جای خودش
      ========================================================= */
   (function shapes() {
     const zone = $('#dnd');
@@ -663,7 +797,7 @@
   })();
 
   /* =========================================================
-     ۷ | رفتاردرمانی: جدول ستاره
+     ۸ | رفتاردرمانی: جدول ستاره
      ========================================================= */
   (function starChart() {
     const list = $('#tasks');
