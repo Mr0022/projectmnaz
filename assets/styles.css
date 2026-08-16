@@ -1,5 +1,5 @@
 /* =========================================================
-   کاردرمانی ذهنی کودکان | مهرناز افشار
+   مرکز سلامت مغز و شناخت کودکان | مهرناز افشار
    تک‌صفحه‌ای، راست‌چین، اسکرول بخش‌به‌بخش
    ========================================================= */
 
@@ -549,6 +549,89 @@ button, input { font: inherit; color: inherit; }
 @keyframes confetti-fly {
   0%   { transform: translate(0, 0) scale(.5) rotate(0deg); opacity: 1; }
   100% { transform: translate(var(--tx), var(--ty)) scale(1.15) rotate(var(--rot)); opacity: 0; }
+}
+
+/* ---------------- صفحه‌ی رزرو نوبت ---------------- */
+
+body.page-plain {
+  overflow: auto;
+  height: auto;
+  min-height: 100%;
+  background:
+    radial-gradient(900px 520px at 88% -8%, rgba(124, 77, 255, .16), transparent 62%),
+    radial-gradient(760px 480px at 6% 104%, rgba(14, 165, 233, .14), transparent 60%),
+    linear-gradient(160deg, #f7f5ff, #eef8ff);
+}
+
+.back-btn { padding: 9px 20px; font-size: 14px; }
+
+.reserve {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 3vw, 30px);
+  padding: calc(var(--head-h) + 30px) clamp(16px, 5vw, 60px) 44px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.reserve__head { width: min(680px, 100%); }
+.reserve__head h1 { font-size: clamp(26px, 4.6vw, 44px); margin-bottom: .3em; }
+.reserve__lead { color: var(--ink-soft); font-size: clamp(14.5px, 1.5vw, 17px); margin: 0; }
+
+.reserve__grid {
+  width: min(920px, 100%);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(14px, 2.4vw, 24px);
+}
+
+.rcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border-radius: var(--radius);
+  padding: clamp(20px, 3vw, 32px) clamp(16px, 2.6vw, 28px);
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(255, 255, 255, .9);
+  transition: transform .3s cubic-bezier(.34, 1.56, .64, 1), box-shadow .3s ease;
+}
+.rcard:hover { transform: translateY(-5px); box-shadow: 0 26px 54px rgba(29, 27, 46, .14); }
+
+.rcard__ico {
+  width: 64px; height: 64px; display: grid; place-items: center;
+  font-size: 30px; border-radius: 22px; margin-bottom: 2px;
+  background: linear-gradient(140deg, color-mix(in srgb, var(--a) 22%, #fff), color-mix(in srgb, var(--b) 40%, #fff));
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--a) 22%, transparent);
+}
+.rcard h2 { font-size: clamp(18px, 2.2vw, 23px); margin: 0; }
+.rcard p { color: var(--ink-soft); font-size: 14.5px; margin: 0 0 6px; max-width: 42ch; }
+.rcard p b { color: var(--ink); }
+.rcard .btn { margin-top: auto; }
+.rcard__note { color: var(--ink-soft); font-size: 12px; opacity: .85; }
+
+.phone {
+  font-size: clamp(19px, 2.4vw, 25px);
+  letter-spacing: .06em;
+  font-weight: 900;
+  padding-inline: 30px;
+}
+
+.reserve__sign { color: var(--ink-soft); font-size: 14px; margin: 0; }
+.reserve__sign b { color: var(--a); }
+
+@media (max-width: 760px) {
+  .reserve { justify-content: flex-start; padding-top: calc(var(--head-h) + 20px); gap: 16px; }
+  .reserve__grid { grid-template-columns: 1fr; }
+  .rcard { padding: 18px 16px; gap: 8px; }
+  .rcard__ico { width: 54px; height: 54px; font-size: 26px; border-radius: 18px; }
+  .rcard p { font-size: 13.5px; }
+  .back-btn { padding: 8px 16px; font-size: 13px; }
 }
 
 /* ---------------- انیمیشن ورود ---------------- */
