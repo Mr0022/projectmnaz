@@ -189,24 +189,88 @@
      صدا (فقط پس از اولین تعامل کاربر)
      --------------------------------------------------------- */
 
-  let audioCtx = null;
-  function tone(freq, duration = 0.28, type = 'sine') {
+  let audioCtx = null, master = null, noiseBuf = null;
+  const SAT = 3;   // شدت اشباع نرم خروجی
+
+  /** ساخت (یا بیدارکردن) موتور صدا.
+      خروجی از یک اشباع‌کننده‌ی نرم (tanh) رد می‌شود: دامنه‌ی بلند به‌جای بریدگی
+      و صدای خش‌دار، نرم فشرده می‌شود. با گین master = ۱/SAT، دامنه‌ی هر صدا
+      دقیقاً به tanh(دامنه) نگاشت می‌شود؛ یعنی صداهای کم‌دامنه بدون تغییر
+      می‌مانند و صدای طبل می‌تواند تا نزدیک بیشینه‌ی ممکن بلند شود. */
+  function audio() {
     try {
       const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
-      audioCtx = audioCtx || new Ctx();
+      if (!Ctx) return null;
+      if (!audioCtx) {
+        audioCtx = new Ctx();
+        const shaper = audioCtx.createWaveShaper();
+        const n = 2048, curve = new Float32Array(n);
+        for (let i = 0; i < n; i++) curve[i] = Math.tanh(SAT * ((i / (n - 1)) * 2 - 1));
+        shaper.curve = curve;
+        shaper.oversample = '4x';
+        master = audioCtx.createGain();
+        master.gain.value = 1 / SAT;
+        master.connect(shaper).connect(audioCtx.destination);
+      }
       if (audioCtx.state === 'suspended') audioCtx.resume();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = type;
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.22, audioCtx.currentTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-      osc.connect(gain).connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + duration + 0.02);
-    } catch (_) { /* صدا اختیاری است */ }
+      return audioCtx;
+    } catch (_) { return null; }
+  }
+
+  function tone(freq, duration = 0.28, type = 'sine', peak = 0.22) {
+    const ctx = audio();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(peak, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+    osc.connect(gain).connect(master);
+    osc.start(t);
+    osc.stop(t + duration + 0.02);
+  }
+
+  /** صدای طبل: بدنه‌ی افت‌کننده + ضربه‌ی نویزی.
+      عمداً پرانرژی در فرکانس‌های میانی است تا روی بلندگوی گوشی هم رسا باشد.
+      peak اینجا «شدت تحریک» است؛ اشباع‌کننده آن را به بیشینه‌ی بی‌بریدگی می‌رساند. */
+  function drumHit(peak = 3.5) {
+    const ctx = audio();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(700, t);
+    osc.frequency.exponentialRampToValueAtTime(150, t + 0.17);
+    const body = ctx.createGain();
+    body.gain.setValueAtTime(0.0001, t);
+    body.gain.exponentialRampToValueAtTime(peak, t + 0.005);
+    body.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    osc.connect(body).connect(master);
+    osc.start(t);
+    osc.stop(t + 0.34);
+
+    if (!noiseBuf) {
+      noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.06), ctx.sampleRate);
+      const data = noiseBuf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) {
+        data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+      }
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 1900;
+    bp.Q.value = 0.7;
+    const click = ctx.createGain();
+    click.gain.setValueAtTime(peak * 0.7, t);
+    click.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    noise.connect(bp).connect(click).connect(master);
+    noise.start(t);
   }
 
   /* =========================================================
@@ -476,7 +540,7 @@
 
     let level = 0, taps = [], listening = false, quietTimer = null, playTimers = [];
 
-    const beat = () => tone(170, 0.13, 'triangle');
+    const beat = () => drumHit();       // بلندترین حالت ممکن بدون بریدگی صدا
     const shape = (gaps) => gaps.map((g) => (g < SPLIT ? 'ک' : 'ب')).join('');
 
     // نمایش ضربه‌ها به‌صورت نقطه؛ نقطه‌ی پس از فاصله‌ی بلند کشیده‌تر است
@@ -530,14 +594,14 @@
 
       if (gaps.length !== pattern.length) {
         status.textContent = `تعداد ضربه‌ها ${fa(pattern.length + 1)} تا بود؛ دوباره گوش کن`;
-        tone(160, 0.3, 'sawtooth');
+        tone(160, 0.3, 'sawtooth', 0.5);
         playBtn.textContent = 'پخش دوباره';
         setTimeout(() => renderDots(pattern, pattern.length + 1), 600);
         return;
       }
 
       if (shape(gaps) === shape(pattern)) {
-        tone(880, 0.24, 'triangle');
+        tone(880, 0.24, 'triangle', 0.5);
         level++;
         if (level >= PATTERNS.length) {
           level = 0;
@@ -550,7 +614,7 @@
         }
       } else {
         status.textContent = 'نزدیک بود! ریتم درست این بود';
-        tone(200, 0.26, 'sawtooth');
+        tone(200, 0.26, 'sawtooth', 0.5);
         playBtn.textContent = 'پخش دوباره';
         setTimeout(() => renderDots(pattern, pattern.length + 1), 600);
       }
