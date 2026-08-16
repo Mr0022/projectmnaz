@@ -337,15 +337,19 @@
       status.textContent = `${fa(0)} از ${fa(FACES.length)} جفت`;
 
       shuffle([...FACES, ...FACES]).forEach((face) => {
-        const card = document.createElement('button');
-        card.type = 'button';
+        const card = document.createElement('div');
         card.className = 'mcard';
+        card.setAttribute('role', 'button');
+        card.tabIndex = 0;
         card.setAttribute('aria-label', 'کارت پنهان');
         const inner = document.createElement('span');
         inner.dataset.face = face;
         card.appendChild(inner);
         card.dataset.face = face;
         card.addEventListener('click', () => pick(card));
+        card.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(card); }
+        });
         board.appendChild(card);
       });
     }
@@ -470,18 +474,24 @@
     let seen = 0;
 
     CARDS.forEach((c) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
+      // از div استفاده می‌شود چون preserve-3d داخل <button> در برخی مرورگرها کار نمی‌کند
+      const btn = document.createElement('div');
       btn.className = 'flip';
+      btn.setAttribute('role', 'button');
+      btn.tabIndex = 0;
       btn.setAttribute('aria-label', c.t);
       btn.innerHTML =
-        '<span class="flip__inner">' +
-          '<span class="flip__face flip__front"><b>' + c.e + '</b></span>' +
-          '<span class="flip__face flip__back"><strong>' + c.t + '</strong><small>' + c.d + '</small></span>' +
-        '</span>';
+        '<div class="flip__inner">' +
+          '<div class="flip__face flip__front"><b>' + c.e + '</b></div>' +
+          '<div class="flip__face flip__back"><strong>' + c.t + '</strong><small>' + c.d + '</small></div>' +
+        '</div>';
+      btn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); btn.click(); }
+      });
       btn.addEventListener('click', () => {
         const was = btn.classList.contains('is-flipped');
         btn.classList.toggle('is-flipped');
+        btn.setAttribute('aria-pressed', String(!was));
         tone(was ? 380 : 560, 0.14, 'triangle');
         if (!was && !btn.dataset.seen) {
           btn.dataset.seen = '1';

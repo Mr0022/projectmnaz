@@ -372,6 +372,7 @@ button, input { font: inherit; color: inherit; }
   aspect-ratio: 1; border: 0; padding: 0; border-radius: 16px; cursor: pointer;
   background: transparent; perspective: 700px;
 }
+.mcard:focus-visible { outline: 3px solid var(--a); outline-offset: 3px; }
 .mcard span {
   position: relative; display: grid; place-items: center;
   width: 100%; height: 100%; border-radius: 16px;
@@ -413,8 +414,9 @@ button, input { font: inherit; color: inherit; }
 /* کارت‌های احساس */
 .flips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .flip { aspect-ratio: .92; border: 0; padding: 0; background: transparent; cursor: pointer; perspective: 800px; }
+.flip:focus-visible { outline: 3px solid var(--a); outline-offset: 3px; border-radius: 18px; }
 .flip__inner {
-  position: relative; width: 100%; height: 100%;
+  display: block; position: relative; width: 100%; height: 100%;
   transform-style: preserve-3d; transition: transform .55s cubic-bezier(.5, 1.3, .5, 1);
 }
 .flip.is-flipped .flip__inner { transform: rotateY(180deg); }
