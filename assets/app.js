@@ -591,24 +591,20 @@
     }
 
     pieces.forEach((piece) => {
-      let dx = 0, dy = 0, w = 0, h = 0, dragging = false;
+      let sx = 0, sy = 0, dragging = false;
 
+      // جابه‌جایی با transform انجام می‌شود تا مستقل از عنصرهای بالادست
+      // (که ممکن است مرجع position:fixed را عوض کنند) دقیقاً زیر نشانگر بماند
       const moveTo = (x, y) => {
-        piece.style.left = (x - dx) + 'px';
-        piece.style.top = (y - dy) + 'px';
+        piece.style.transform = `translate(${x - sx}px, ${y - sy}px) scale(1.08)`;
       };
 
       piece.addEventListener('pointerdown', (e) => {
         if (piece.classList.contains('is-placed')) return;
         dragging = true;
-        const r = piece.getBoundingClientRect();
-        w = r.width; h = r.height;
-        dx = e.clientX - r.left;          // فاصله‌ی نشانگر تا گوشه‌ی شکل
-        dy = e.clientY - r.top;
+        sx = e.clientX;
+        sy = e.clientY;
         piece.classList.add('is-dragging');
-        piece.style.position = 'fixed';
-        piece.style.width = w + 'px';
-        piece.style.height = h + 'px';
         moveTo(e.clientX, e.clientY);
         piece.setPointerCapture(e.pointerId);
       });

@@ -480,7 +480,7 @@ button, input { font: inherit; color: inherit; }
   transition: transform .25s cubic-bezier(.34, 1.56, .64, 1);
 }
 .shape:hover { transform: scale(1.08) rotate(-4deg); }
-.shape.is-dragging { cursor: grabbing; z-index: 20; transition: none; }
+.shape.is-dragging { cursor: grabbing; position: relative; z-index: 30; transition: none; }
 .shape.is-placed { cursor: default; }
 .shape.is-placed:hover { transform: none; }
 .circle { border-radius: 50%; }
@@ -529,7 +529,9 @@ button, input { font: inherit; color: inherit; }
   transition: opacity .7s ease var(--d, 0s), transform .7s cubic-bezier(.22, 1, .36, 1) var(--d, 0s);
   will-change: opacity, transform;
 }
-.sec.is-active .reveal, .reveal.is-in { opacity: 1; transform: none; }
+/* پس از نمایش، will-change برداشته می‌شود تا این عنصر مرجع
+   عنصرهای position:fixed درونش نشود */
+.sec.is-active .reveal, .reveal.is-in { opacity: 1; transform: none; will-change: auto; }
 
 /* ---------------- واکنش‌گرایی ---------------- */
 
