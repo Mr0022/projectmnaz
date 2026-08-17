@@ -1,0 +1,18 @@
+{
+  "name": "کاردرمانی ذهنی کودکان | مهرناز افشار",
+  "short_name": "کاردرمانی کودکان",
+  "description": "کاردرمانی ذهنی کودکان با مهرناز افشار؛ تمرین‌های تعاملی و رزرو نوبت.",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fff7fb",
+  "theme_color": "#fff7fb",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
