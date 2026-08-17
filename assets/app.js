@@ -147,11 +147,41 @@
     }, 160);
   });
 
+  /* ---------------------------------------------------------
+     هم‌گامی با نشانه‌ی آدرس
+
+     صفحه‌های کاملِ هر بخش با `index.html#id` برمی‌گردند و نشانه‌ی آدرس
+     هم‌زمان با پیمایش به‌روز می‌شود؛ پس دکمه‌ی بازگشت مرورگر هم کاربر را
+     به همان بخشی می‌رساند که از آن بیرون رفته بود، نه به ابتدای صفحه.
+     --------------------------------------------------------- */
+
+  /** شماره‌ی بخشی که آدرس به آن اشاره می‌کند، وگرنه ۱- */
+  const hashIndex = () => {
+    let id = '';
+    try { id = decodeURIComponent(location.hash.slice(1)); } catch (_) { id = location.hash.slice(1); }
+    return id ? sections.findIndex((s) => s.id === id) : -1;
+  };
+
+  /** نشستن بی‌درنگ روی بخش i، بدون انیمیشن */
+  function jumpTo(i) {
+    stopAnim();
+    index = clampIndex(i);
+    scroller.scrollTop = topOf(index);
+    updateProgress();
+  }
+
   // اندازه‌ها پس از بارگذاری فونت‌ها تغییر می‌کند
-  window.addEventListener('load', () => { applyMode(); updateProgress(); });
+  window.addEventListener('load', () => {
+    applyMode();
+    if (!dragging && !animating) jumpTo(index);
+    updateProgress();
+  });
 
   applyMode();
   updateProgress();
+
+  const fromHash = hashIndex();
+  if (fromHash > 0) jumpTo(fromHash);
 
   // ناوبری نقطه‌ای + منوی تمام‌صفحه
   const dots = $('#dots');
@@ -190,6 +220,15 @@
       const cs = getComputedStyle(entry.target);
       document.documentElement.style.setProperty('--a', cs.getPropertyValue('--a'));
       document.documentElement.style.setProperty('--b', cs.getPropertyValue('--b'));
+
+      // نشانه‌ی آدرس با بخش جاری هم‌گام می‌شود؛ با replaceState تا تاریخچه
+      // شلوغ نشود و دکمه‌ی بازگشت همچنان یک‌بار به صفحه‌ی قبلی برگردد
+      const id = i === 0 ? '' : entry.target.id;
+      if (location.hash.slice(1) !== id) {
+        try {
+          history.replaceState(null, '', location.pathname + location.search + (id ? '#' + id : ''));
+        } catch (_) { /* روی file:// برخی مرورگرها اجازه نمی‌دهند */ }
+      }
     });
     // بخشی فعال است که از میانه‌ی صفحه عبور می‌کند (مستقل از ارتفاع بخش)
   }, { root: scroller, rootMargin: '-45% 0px -45% 0px', threshold: 0 });
@@ -1260,6 +1299,6 @@
     render();
   })();
 
-  // بخش نخست از همان ابتدا فعال باشد
-  sections[0].classList.add('is-active');
+  // بخش آغازین (خانه، یا بخشی که آدرس خواسته) از همان ابتدا فعال باشد
+  sections[clampIndex(index)].classList.add('is-active');
 })();
