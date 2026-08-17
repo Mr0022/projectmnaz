@@ -16,22 +16,141 @@
   const sections = $$('.sec');
 
   /* ---------------------------------------------------------
-     پیمایش: نوار پیشرفت، نقطه‌ها، منو، صفحه‌کلید
+     موتور پیمایش: نوار پیشرفت، نقطه‌ها، منو، صفحه‌کلید
+
+     همه‌ی جابه‌جایی‌های عمودی از همین‌جا انجام می‌شود و در حالت
+     کنترل‌شده، اسنپِ خودِ مرورگر خاموش است؛ هم‌زمانی اسنپ و اسکرول نرمِ
+     مرورگر با انیمیشن اسکریپت باعث می‌شد صفحه لحظه‌ای میان دو بخش
+     بایستد و گاهی اسکرول تا اولین کلیک کاربر قفل بماند.
      --------------------------------------------------------- */
 
+  const STEP_MS   = 520;    // مدت انیمیشن جابه‌جایی یک بخش
+  const SETTLE_MS = 140;    // مکثی که «پایان اسکرول» شمرده می‌شود
+
+  let index = 0;            // بخش جاری
+  let controlled = true;    // آیا پیمایش در اختیار اسکریپت است؟
+  let animating = false, dragging = false, resizing = false;
+  let animRaf = 0, animGuard = 0, settleTimer = 0;
+
+  const clampIndex = (i) => Math.max(0, Math.min(sections.length - 1, i));
+  const maxScroll  = () => Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+
+  /** فاصله‌ی بالای بخش i تا ابتدای اسکرولر */
+  const topOf = (i) => {
+    const s = sections[clampIndex(i)];
+    const y = scroller.scrollTop + s.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+    return Math.max(0, Math.min(Math.round(y), maxScroll()));
+  };
+
+  /** نزدیک‌ترین بخش به لبه‌ی بالای اسکرولر */
+  const nearestIndex = () => {
+    const edge = scroller.getBoundingClientRect().top;
+    let best = 0, bestDist = Infinity;
+    sections.forEach((s, i) => {
+      const d = Math.abs(s.getBoundingClientRect().top - edge);
+      if (d < bestDist) { bestDist = d; best = i; }
+    });
+    return best;
+  };
+
+  const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+  function stopAnim() {
+    if (animRaf) cancelAnimationFrame(animRaf);
+    clearTimeout(animGuard);
+    animRaf = 0; animGuard = 0; animating = false;
+  }
+
+  /** انیمیشن دستی اسکرول؛ چون scroll-behavior نرم نیست، مقدار scrollTop
+      بی‌درنگ می‌نشیند و می‌توان انیمیشن را در هر لحظه قطع کرد. */
+  function animateTo(top, ms) {
+    stopAnim();
+    const from = scroller.scrollTop;
+    const dist = top - from;
+    if (!ms || Math.abs(dist) < 2) { scroller.scrollTop = top; return; }
+
+    const t0 = performance.now();
+    animating = true;
+    // اگر فریم‌ها متوقف شوند (مثلاً تب پنهان شود) این نگهبان قفل را باز می‌کند
+    animGuard = setTimeout(() => { stopAnim(); scroller.scrollTop = top; }, ms + 600);
+
+    const frame = (now) => {
+      const p = Math.min(1, (now - t0) / ms);
+      scroller.scrollTop = from + dist * ease(p);
+      if (p < 1) { animRaf = requestAnimationFrame(frame); return; }
+      stopAnim();
+      scroller.scrollTop = top;
+    };
+    animRaf = requestAnimationFrame(frame);
+  }
+
+  /** رفتن به بخش شماره‌ی i؛ خروجی می‌گوید جابه‌جایی انجام شد یا نه */
+  function go(i) {
+    const next = clampIndex(i);
+    const top  = topOf(next);
+    const move = next !== index || Math.abs(scroller.scrollTop - top) > 2;
+    index = next;
+    if (!move) return false;
+    if (controlled) animateTo(top, reduceMotion ? 0 : STEP_MS);
+    else scroller.scrollTo({ top, behavior: reduceMotion ? 'auto' : 'smooth' });
+    return true;
+  }
+
   const goTo = (id) => {
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    const i = sections.findIndex((s) => s.id === id);
+    if (i >= 0) go(i);
   };
 
   // نوار پیشرفت
   const bar = $('#progressBar');
   const updateProgress = () => {
-    const max = scroller.scrollHeight - scroller.clientHeight;
+    const max = maxScroll();
     bar.style.width = (max > 0 ? (scroller.scrollTop / max) * 100 : 0) + '%';
   };
-  scroller.addEventListener('scroll', updateProgress, { passive: true });
-  window.addEventListener('resize', updateProgress);
+
+  /** پیمایش بخش‌به‌بخش تنها وقتی معنا دارد که هر بخش در یک صفحه جا شود */
+  function applyMode() {
+    controlled = sections.every((s) => s.getBoundingClientRect().height <= scroller.clientHeight + 4);
+    scroller.style.scrollSnapType = controlled ? 'none' : '';
+    // پیمایش عمودی دست اسکریپت است، ولی نوار افقی اهداف و بزرگ‌نمایی آزادند
+    scroller.style.touchAction = '';
+    if (!controlled) return;
+    scroller.style.touchAction = 'pan-x pinch-zoom';
+    if (!scroller.style.touchAction) scroller.style.touchAction = 'pan-x';   // مرورگر قدیمی
+  }
+
+  // پس از هر توقف اسکرول، موقعیت با نزدیک‌ترین بخش هم‌تراز می‌شود؛
+  // این تور ایمنی، اسکرول‌های بیرون از کنترل اسکریپت را هم جمع می‌کند
+  scroller.addEventListener('scroll', () => {
+    updateProgress();
+    if (animating || dragging || resizing) return;
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => {
+      if (animating || dragging || resizing) return;
+      index = nearestIndex();
+      const top = topOf(index);
+      if (controlled && Math.abs(scroller.scrollTop - top) > 2) animateTo(top, reduceMotion ? 0 : 260);
+    }, SETTLE_MS);
+  }, { passive: true });
+
+  let resizeTimer = 0;
+  window.addEventListener('resize', () => {
+    // تا پایان تغییر ابعاد، شماره‌ی بخش دست‌نخورده می‌ماند تا کاربر
+    // همان‌جایی که بود بماند (وگرنه جابه‌جاییِ مرزها او را جلو می‌برد)
+    resizing = true;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      resizing = false;
+      applyMode();
+      updateProgress();
+      if (!dragging) { stopAnim(); scroller.scrollTop = topOf(index); }
+    }, 160);
+  });
+
+  // اندازه‌ها پس از بارگذاری فونت‌ها تغییر می‌کند
+  window.addEventListener('load', () => { applyMode(); updateProgress(); });
+
+  applyMode();
   updateProgress();
 
   // ناوبری نقطه‌ای + منوی تمام‌صفحه
@@ -88,61 +207,190 @@
   // دکمه‌های پرش
   $$('[data-goto]').forEach((b) => b.addEventListener('click', () => goTo(b.dataset.goto)));
 
+  // پیوندهای درون‌صفحه‌ای (مثل نشان بالای صفحه) هم از همین موتور رد شوند
+  $$('a[href^="#"]').forEach((a) => {
+    const id = a.getAttribute('href').slice(1);
+    if (!id || !sections.some((s) => s.id === id)) return;
+    a.addEventListener('click', (e) => { e.preventDefault(); goTo(id); });
+  });
+
   /* ---------------------------------------------------------
-     هر اسکرول = یک بخش
-     (تنها زمانی فعال است که همه‌ی بخش‌ها در یک صفحه جا شوند)
+     چرخ ماوس و تاچ‌پد: هر حرکت = یک بخش
+
+     رویدادهای دنباله‌دارِ اینرسیِ تاچ‌پد بلعیده می‌شوند تا یک حرکت
+     چند بخش را رد نکند، اما این مهار همیشه زمان‌دار است: هیچ رویدادی
+     قفل را تمدید نمی‌کند، پس اسکرولِ پیوسته هرگز به بن‌بست نمی‌رسد.
      --------------------------------------------------------- */
 
-  let oneByOne = true;
-  const updateMode = () => {
-    oneByOne = sections.every((s) => s.getBoundingClientRect().height <= scroller.clientHeight + 4);
-  };
-  updateMode();
-  window.addEventListener('resize', () => setTimeout(updateMode, 200));
+  const WHEEL_MIN  = 40;    // کمینه‌ی چرخش برای یک بخش
+  const WHEEL_GAP  = 160;   // سکوت لازم میان دو حرکت مستقل
+  const WHEEL_TAIL = 180;   // بیشینه‌ی مهار دنباله‌ی اینرسی پس از هر پرش
 
-  // نزدیک‌ترین بخش به موقعیت فعلی
-  const nearestIndex = () => {
-    const y = scroller.scrollTop;
-    let best = 0, bestDist = Infinity;
-    sections.forEach((s, i) => {
-      const d = Math.abs(s.offsetTop - y);
-      if (d < bestDist) { bestDist = d; best = i; }
-    });
-    return best;
-  };
+  let wheelSum = 0, wheelAt = 0, wheelPrev = 0, stepAt = 0, tailing = false;
 
-  let locked = false, lockTimer = null;
-  const lockNav = (ms = 780) => {
-    locked = true;
-    clearTimeout(lockTimer);
-    lockTimer = setTimeout(() => { locked = false; }, ms);
-  };
-
-  const step = (dir) => {
-    const next = sections[nearestIndex() + dir];
-    if (!next) return false;
-    lockNav();
-    goTo(next.id);
-    return true;
-  };
+  const wheelDelta = (e) =>
+    e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? scroller.clientHeight : 1);
 
   scroller.addEventListener('wheel', (e) => {
-    if (!oneByOne || e.ctrlKey) return;                       // زوم یا حالت متن بلند
+    if (!controlled || e.ctrlKey) return;                     // زوم یا حالت متن بلند
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;      // اسکرول افقی (نوار اهداف)
-    if (Math.abs(e.deltaY) < 4) return;
+    const d = wheelDelta(e);
+    if (Math.abs(d) < 1) return;
     e.preventDefault();
-    if (locked) { lockNav(); return; }                        // اینرسی تاچ‌پد بخش رد نکند
-    step(e.deltaY > 0 ? 1 : -1);
+
+    const now = performance.now();
+    const gap = now - wheelAt;
+    const abs = Math.abs(d);
+    wheelAt = now;
+
+    if (gap > WHEEL_GAP) { wheelSum = 0; tailing = false; }   // حرکت تازه‌ی کاربر
+
+    // در میانه‌ی جابه‌جایی، رویداد فقط بلعیده می‌شود
+    if (animating || dragging) { wheelPrev = abs; return; }
+
+    if (tailing) {
+      // دنباله‌ی اینرسی تاچ‌پد پرشتاب و رو به کاهش است؛ تا اوج‌گرفتن دوباره،
+      // ضربه‌ی مستقلِ چرخ ماوس، یا سررسید مهار نادیده گرفته می‌شود
+      if (abs > wheelPrev * 1.2 + 1 ||
+          (gap > 90 && abs >= 50) ||
+          now - stepAt > STEP_MS + WHEEL_TAIL) tailing = false;
+      else { wheelPrev = abs; return; }
+    }
+    wheelPrev = abs;
+
+    wheelSum += d;
+    if (Math.abs(wheelSum) < WHEEL_MIN) return;
+    const dir = wheelSum > 0 ? 1 : -1;
+    wheelSum = 0;
+    if (go(nearestIndex() + dir)) { stepAt = performance.now(); tailing = true; }
   }, { passive: false });
+
+  /* ---------------------------------------------------------
+     لمس: هر کشش یا تلنگر = یک بخش
+
+     انگشت مستقیم روی اسکرول می‌نشیند اما بیش از یک بخش جلو نمی‌رود،
+     و بخش مقصد فقط یک‌بار و هنگام رهاکردن انگشت انتخاب می‌شود؛
+     پس تغییر جهت وسط حرکت، دیگر میان دو بخش سرگردان نمی‌ماند.
+     --------------------------------------------------------- */
+
+  const SWIPE_MIN = 0.15;   // کشش لازم برای پذیرش (کسری از ارتفاع صفحه)
+  const SWIPE_VEL = 0.35;   // سرعت لازم برای تلنگر (پیکسل بر میلی‌ثانیه)
+  const AXIS_MIN  = 8;      // جابه‌جایی لازم برای تشخیص محور حرکت
+  const TOUCH_FREE = 'canvas, input, textarea, select, .shape';  // خودشان انگشت را می‌خواهند
+
+  let touchId = null, vertical = false;
+  let tx0 = 0, ty0 = 0, top0 = 0, baseIdx = 0, baseTop = 0, maxTop = 0;
+  let lastY = 0, lastT = 0, vel = 0;
+
+  const touchById = (list, id) => {
+    for (let i = 0; i < list.length; i++) if (list[i].identifier === id) return list[i];
+    return null;
+  };
+
+  const endDrag = () => { touchId = null; vertical = false; dragging = false; };
+
+  scroller.addEventListener('touchstart', (e) => {
+    if (!controlled) return;
+    if (e.touches.length > 1) {                       // دو انگشت: بزرگ‌نمایی
+      const was = dragging, base = baseIdx;
+      endDrag();
+      if (was) go(base);
+      return;
+    }
+    const t = e.changedTouches[0];
+    if (t.target.closest && t.target.closest(TOUCH_FREE)) { touchId = null; return; }
+    touchId = t.identifier;
+    vertical = false;
+    tx0 = t.clientX; ty0 = lastY = t.clientY;
+    lastT = performance.now();
+    vel = 0;
+    // اگر انیمیشنی در جریان است، مبنا مقصدِ همان انیمیشن است
+    baseIdx = animating ? index : nearestIndex();
+  }, { passive: true });
+
+  scroller.addEventListener('touchmove', (e) => {
+    if (touchId === null) return;
+    if (!controlled) { endDrag(); return; }           // ابعاد وسط کار عوض شد
+    const t = touchById(e.changedTouches, touchId);
+    if (!t) return;
+
+    if (!vertical) {
+      const dx = Math.abs(t.clientX - tx0), dy = Math.abs(t.clientY - ty0);
+      if (dx < AXIS_MIN && dy < AXIS_MIN) return;
+      if (dx > dy) { touchId = null; return; }        // حرکت افقی، به مرورگر واگذار
+      vertical = true;
+      dragging = true;
+      stopAnim();                                     // از همین‌جا که هست ادامه بده
+      lastY = t.clientY;
+      lastT = performance.now();
+      // مبدأ اندازه‌گیری همان نقطه‌ی آغاز لمس می‌ماند؛ برای اینکه صفحه
+      // در لحظه‌ی گرفتن کنترل نپرد، مقدار پایه با همان اختلاف جبران می‌شود
+      top0 = scroller.scrollTop + (t.clientY - ty0);
+      baseTop = topOf(baseIdx);
+      maxTop = maxScroll();
+    }
+
+    const now = performance.now();
+    const dt = now - lastT;
+    if (dt > 0) {
+      vel = vel * 0.6 + ((lastY - t.clientY) / dt) * 0.4;
+      lastY = t.clientY;
+      lastT = now;
+    }
+
+    // جز روی مرورگرهای قدیمی، touch-action جلوی اسکرول بومی را گرفته است؛
+    // این خط تضمین می‌کند حرکت دوباره روی اسکرول ما سوار نشود
+    if (e.cancelable) e.preventDefault();
+
+    // انگشت را دنبال کن، اما بیش از یک بخش جلوتر نرو
+    const h = scroller.clientHeight;
+    const y = top0 - (t.clientY - ty0);
+    scroller.scrollTop = Math.max(0, Math.min(maxTop,
+      Math.max(baseTop - h, Math.min(baseTop + h, y))));
+  }, { passive: false });
+
+  scroller.addEventListener('touchend', (e) => {
+    if (touchId === null) return;
+    const t = touchById(e.changedTouches, touchId);
+    if (!t) return;
+    const was = dragging, base = baseIdx;
+    const moved = ty0 - t.clientY;                    // مثبت = انگشت بالا رفت = بخش بعد
+    const idle = performance.now() - lastT;
+    endDrag();
+    if (!was) return;                                 // ضربه‌ی ساده بود، نه کشش
+
+    const h = scroller.clientHeight;
+    const v = idle > 80 ? 0 : vel;                    // انگشت پیش از رهاشدن ایستاده بود
+    const byMove = Math.abs(moved) > h * SWIPE_MIN ? Math.sign(moved) : 0;
+    const byVel  = Math.abs(v) > SWIPE_VEL ? Math.sign(v) : 0;
+    // اگر جهت کشش و جهت تلنگر یکی نبود یعنی کاربر منصرف شده: به جای اول برگرد
+    const dir = (byMove && byVel) ? (byMove === byVel ? byMove : 0) : (byMove || byVel);
+    go(base + dir);
+  }, { passive: true });
+
+  scroller.addEventListener('touchcancel', () => {
+    if (touchId === null) return;
+    const was = dragging, base = baseIdx;
+    endDrag();
+    if (was) go(base);
+  }, { passive: true });
 
   // صفحه‌کلید
   document.addEventListener('keydown', (e) => {
     if (e.target.matches('input, textarea, canvas')) return;
     if (e.key === 'Escape') return closeMenu();
+    if (!controlled) return;
+    if (e.key === 'Home' || e.key === 'End') {
+      e.preventDefault();
+      return void go(e.key === 'Home' ? 0 : sections.length - 1);
+    }
     const dir = { ArrowDown: 1, PageDown: 1, ' ': 1, ArrowUp: -1, PageUp: -1 }[e.key];
-    if (dir === undefined || !oneByOne) return;
+    if (dir === undefined) return;
     if (e.key === ' ' && e.target.closest('button, a, [tabindex]')) return;  // فاصله = فعال‌کردن دکمه
-    if (sections[nearestIndex() + dir]) { e.preventDefault(); step(dir); }
+    const to = (animating ? index : nearestIndex()) + dir;
+    if (!sections[to]) return;
+    e.preventDefault();
+    go(to);
   });
 
   /* ---------------------------------------------------------
