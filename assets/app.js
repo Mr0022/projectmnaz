@@ -51,6 +51,8 @@
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = label;
+    // شماره‌ی منو با رقم فارسی و دو رقمی: ۰۱ … ۱۱
+    btn.dataset.num = fa(String(i + 1).padStart(2, '0'));
     btn.addEventListener('click', () => { closeMenu(); goTo(sec.id); });
     li.appendChild(btn);
     menuList.appendChild(li);
@@ -861,7 +863,110 @@
   })();
 
   /* =========================================================
-     ۸ | رفتاردرمانی: جدول ستاره
+     ۸ | سنجش مدرسه: ایستگاه سنجش
+     ========================================================= */
+  (function screening() {
+    const box = $('#quiz');
+    if (!box) return;
+    const ask      = $('#quizAsk');
+    const show     = $('#quizShow');
+    const opts     = $('#quizOpts');
+    const track    = $('#quizTrack');
+    const status   = $('#quizStatus');
+    const resetBtn = $('#quizReset');
+
+    // هر پرسش یک حیطه‌ی آمادگی را نشان می‌دهد: شمارش، رنگ، شکل، مفهوم پایه و رفتار
+    // a = شماره‌ی گزینه‌ی درست، l = برچسب برای صفحه‌خوان، t = زیرنویس گزینه
+    const QUESTIONS = [
+      { q: 'چند تا مداد می‌بینی؟', show: '✏️✏️✏️✏️', a: 1,
+        o: [{ e: '۳', l: 'سه' }, { e: '۴', l: 'چهار' }, { e: '۵', l: 'پنج' }] },
+      { q: 'کدام‌یک زرد است؟', show: '🎨', a: 2,
+        o: [{ e: '🔴', l: 'قرمز' }, { e: '🟢', l: 'سبز' }, { e: '🟡', l: 'زرد' }] },
+      { q: 'کدام‌یک مثلث است؟', show: '🧩', a: 0,
+        o: [{ e: '🔺', l: 'مثلث' }, { e: '🟦', l: 'مربع' }, { e: '🔵', l: 'دایره' }] },
+      { q: 'کدام‌یک بزرگ‌تر است؟', show: '📏', a: 1,
+        o: [{ e: '🐜', l: 'مورچه' }, { e: '🐘', l: 'فیل' }] },
+      { q: 'در کلاس، برای حرف زدن چه می‌کنیم؟', show: '🏫', a: 0,
+        o: [
+          { e: '✋', l: 'دست بلند می‌کنیم', t: 'دست بلند می‌کنیم' },
+          { e: '📣', l: 'داد می‌زنیم',      t: 'داد می‌زنیم' },
+          { e: '🏃', l: 'از جا بلند می‌شویم', t: 'بلند می‌شویم' }
+        ] }
+    ];
+
+    let step = 0, solved = 0, locked = false;
+
+    const pips = QUESTIONS.map(() => track.appendChild(document.createElement('i')));
+    const setStatus = () => { status.textContent = `${fa(solved)} از ${fa(QUESTIONS.length)}`; };
+
+    function render() {
+      const item = QUESTIONS[step];
+      ask.textContent = item.q;
+      show.textContent = item.show;
+      opts.innerHTML = '';
+      opts.classList.remove('is-done');
+      opts.classList.toggle('is-two', item.o.length === 2);
+
+      item.o.forEach((o, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'qopt';
+        b.setAttribute('aria-label', o.l);
+        b.innerHTML = '<b aria-hidden="true">' + o.e + '</b>' +
+                      (o.t ? '<small aria-hidden="true">' + o.t + '</small>' : '');
+        b.addEventListener('click', () => answer(b, i === item.a));
+        opts.appendChild(b);
+      });
+    }
+
+    // پاسخ نادرست پایان بازی نیست؛ کودک دوباره تلاش می‌کند
+    function answer(btn, right) {
+      if (locked) return;
+      if (!right) {
+        btn.classList.add('is-wrong');
+        tone(200, 0.22, 'sawtooth');
+        setTimeout(() => btn.classList.remove('is-wrong'), 430);
+        return;
+      }
+
+      locked = true;
+      btn.classList.add('is-right');
+      tone(720, 0.18, 'triangle');
+      pips[step].classList.add('on');
+      solved++;
+      setStatus();
+
+      setTimeout(() => {
+        locked = false;
+        if (step < QUESTIONS.length - 1) { step++; return render(); }
+        finish();
+      }, 640);
+    }
+
+    function finish() {
+      ask.textContent = 'پرونده‌ی آمادگی‌ات کامل شد!';
+      show.textContent = '🎒🌟';
+      opts.classList.remove('is-two');
+      opts.classList.add('is-done');
+      opts.innerHTML = '<p class="qdone">همه‌ی ایستگاه‌ها را رد کردی؛ حالا با خیال راحت به کلاس اول فکر کن.</p>';
+      status.textContent = 'آماده‌ی کلاس اول 🎉';
+      celebrate(box);
+      setTimeout(() => tone(980, 0.3, 'triangle'), 140);
+    }
+
+    resetBtn.addEventListener('click', () => {
+      step = 0; solved = 0; locked = false;
+      pips.forEach((p) => p.classList.remove('on'));
+      setStatus();
+      render();
+    });
+
+    setStatus();
+    render();
+  })();
+
+  /* =========================================================
+     ۹ | رفتاردرمانی: جدول ستاره
      ========================================================= */
   (function starChart() {
     const list = $('#tasks');
