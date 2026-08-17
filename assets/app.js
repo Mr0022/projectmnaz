@@ -19,7 +19,33 @@
      پیمایش: نوار پیشرفت، نقطه‌ها، منو، صفحه‌کلید
      --------------------------------------------------------- */
 
+  /** فاصله‌ی بالای یک بخش تا ابتدای اسکرولر، در دستگاه مختصات scrollTop.
+      از offsetTop استفاده نمی‌شود چون به offsetParent وابسته است. */
+  const topOf = (el) =>
+    el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+
+  // مقصد پرشی که در حال انجام است (‎-۱ یعنی پرشی در جریان نیست).
+  // بدون این، گام بعدی از موقعیت میانه‌ی انیمیشن حساب می‌شد و روی همان بخش می‌ماند.
+  let targetIndex = -1;
+
+  // با آرام‌گرفتن اسکرول، مقصد پاک می‌شود تا گام بعدی از موقعیت واقعی حساب شود
+  let settleTimer = null;
+  const settle = (ms) => {
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => { targetIndex = -1; }, ms);
+  };
+
+  const goToIndex = (i) => {
+    const el = sections[i];
+    if (!el) return;
+    targetIndex = i;
+    settle(1200);
+    scroller.scrollTo({ top: Math.round(topOf(el)), behavior: reduceMotion ? 'auto' : 'smooth' });
+  };
+
   const goTo = (id) => {
+    const i = sections.findIndex((s) => s.id === id);
+    if (i >= 0) return goToIndex(i);
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
   };
@@ -30,7 +56,11 @@
     const max = scroller.scrollHeight - scroller.clientHeight;
     bar.style.width = (max > 0 ? (scroller.scrollTop / max) * 100 : 0) + '%';
   };
-  scroller.addEventListener('scroll', updateProgress, { passive: true });
+
+  scroller.addEventListener('scroll', () => {
+    updateProgress();
+    settle(180);
+  }, { passive: true });
   window.addEventListener('resize', updateProgress);
   updateProgress();
 
@@ -96,53 +126,93 @@
   let oneByOne = true;
   const updateMode = () => {
     oneByOne = sections.every((s) => s.getBoundingClientRect().height <= scroller.clientHeight + 4);
+    // چفت‌شدنِ اجباری فقط تا وقتی درست است که هر بخش در یک صفحه جا شود
+    scroller.classList.toggle('is-free', !oneByOne);
   };
-  updateMode();
-  window.addEventListener('resize', () => setTimeout(updateMode, 200));
 
-  // نزدیک‌ترین بخش به موقعیت فعلی
+  let modeTimer = null;
+  const queueMode = () => { clearTimeout(modeTimer); modeTimer = setTimeout(updateMode, 150); };
+  updateMode();
+  window.addEventListener('resize', queueMode);
+  window.addEventListener('orientationchange', queueMode);
+  // ارتفاع بخش‌ها پس از آمدن فونت و بارگذاری کامل عوض می‌شود
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(queueMode);
+  window.addEventListener('load', queueMode);
+  if ('ResizeObserver' in window) {
+    const ro = new ResizeObserver(queueMode);
+    sections.forEach((s) => ro.observe(s));
+  }
+
+  // نزدیک‌ترین بخش به بالای کادر دید
   const nearestIndex = () => {
-    const y = scroller.scrollTop;
+    const top = scroller.getBoundingClientRect().top;
     let best = 0, bestDist = Infinity;
     sections.forEach((s, i) => {
-      const d = Math.abs(s.offsetTop - y);
+      const d = Math.abs(s.getBoundingClientRect().top - top);
       if (d < bestDist) { bestDist = d; best = i; }
     });
     return best;
   };
 
-  let locked = false, lockTimer = null;
-  const lockNav = (ms = 780) => {
-    locked = true;
-    clearTimeout(lockTimer);
-    lockTimer = setTimeout(() => { locked = false; }, ms);
-  };
-
   const step = (dir) => {
-    const next = sections[nearestIndex() + dir];
-    if (!next) return false;
-    lockNav();
-    goTo(next.id);
+    const from = targetIndex >= 0 ? targetIndex : nearestIndex();
+    const next = from + dir;
+    if (next < 0 || next >= sections.length) return false;
+    goToIndex(next);
     return true;
   };
+
+  /* یک ژست = یک بخش. «ژست» با سکوتِ GESTURE_GAP از ژست بعدی جدا می‌شود، پس
+     دنباله‌ی اینرسیِ تاچ‌پد چند بخش را رد نمی‌کند. اما اگر کاربر واقعاً دست
+     نکشد، هر REPEAT یک بخش جلو می‌رود. نکته‌ی مهم: هیچ رویدادی مهلت را تمدید
+     نمی‌کند؛ پیش‌تر هر تکان چرخ قفل را از نو ۷۸۰ms می‌کرد و اسکرولِ ممتد
+     صفحه را تا وقتی کاربر دست نمی‌کشید کاملاً قفل نگه می‌داشت. */
+  const GESTURE_GAP = 110;   // سکوتی که دو ژست را از هم جدا می‌کند
+  const MIN_GAP     = 260;   // فاصله‌ی کمینه‌ی دو پرش پشت‌سرهم
+  const REPEAT      = 700;   // در اسکرولِ ممتد، هر این‌قدر یک بخش
+  let lastWheelAt = 0, lastStepAt = 0, lastDir = 0, stepped = false;
 
   scroller.addEventListener('wheel', (e) => {
     if (!oneByOne || e.ctrlKey) return;                       // زوم یا حالت متن بلند
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;      // اسکرول افقی (نوار اهداف)
     if (Math.abs(e.deltaY) < 4) return;
     e.preventDefault();
-    if (locked) { lockNav(); return; }                        // اینرسی تاچ‌پد بخش رد نکند
-    step(e.deltaY > 0 ? 1 : -1);
+
+    const now = performance.now();
+    const dir = e.deltaY > 0 ? 1 : -1;
+    // سکوت کوتاه یا عوض‌شدنِ جهت یعنی ژست تازه‌ای شروع شده
+    if (now - lastWheelAt > GESTURE_GAP || dir !== lastDir) stepped = false;
+    lastWheelAt = now;
+    lastDir = dir;
+
+    // ژست تازه: به‌محض گذشتنِ فاصله‌ی کمینه یک بخش. اگر هنوز زود است ژست
+    // «مصرف‌شده» علامت نمی‌خورد تا رویداد بعدی دوباره تلاش کند؛ وگرنه
+    // عوض‌کردنِ جهت وسط یک اسکرول ممتد تا REPEAT بی‌پاسخ می‌ماند.
+    if (!stepped) {
+      if (now - lastStepAt < MIN_GAP) return;
+      stepped = true;
+      lastStepAt = now;
+      step(dir);
+      return;
+    }
+    // همان ژست ادامه دارد (کاربر دست نکشیده): هر REPEAT یک بخش جلوتر
+    if (now - lastStepAt > REPEAT) { lastStepAt = now; step(dir); }
   }, { passive: false });
 
   // صفحه‌کلید
   document.addEventListener('keydown', (e) => {
     if (e.target.matches('input, textarea, canvas')) return;
     if (e.key === 'Escape') return closeMenu();
+    if (menuPanel.classList.contains('is-open')) return;      // فهرست باز است: کلیدها مال آن است
+    if (oneByOne && (e.key === 'Home' || e.key === 'End')) {
+      e.preventDefault();
+      return goToIndex(e.key === 'Home' ? 0 : sections.length - 1);
+    }
     const dir = { ArrowDown: 1, PageDown: 1, ' ': 1, ArrowUp: -1, PageUp: -1 }[e.key];
     if (dir === undefined || !oneByOne) return;
     if (e.key === ' ' && e.target.closest('button, a, [tabindex]')) return;  // فاصله = فعال‌کردن دکمه
-    if (sections[nearestIndex() + dir]) { e.preventDefault(); step(dir); }
+    const from = targetIndex >= 0 ? targetIndex : nearestIndex();
+    if (sections[from + dir]) { e.preventDefault(); step(dir); }
   });
 
   /* ---------------------------------------------------------

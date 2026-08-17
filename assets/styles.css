@@ -48,13 +48,18 @@ button, input { font: inherit; color: inherit; }
 
 /* ---------------- اسکرولر اصلی ---------------- */
 
+/* scroll-behavior اینجا تعریف نمی‌شود: پرش نرم را خود JS با
+   scrollTo({behavior:'smooth'}) انجام می‌دهد. اگر روی خودِ ظرفِ چفت‌شونده
+   بنشیند، انیمیشنِ چفت‌شدن با حرکت انگشت درمی‌افتد و تغییر جهت روی گوشی
+   به بخش قبلی برمی‌گردد. */
 #scroller {
   height: 100dvh;
   overflow-y: auto;
   overflow-x: hidden;
   scroll-snap-type: y mandatory;
-  scroll-behavior: smooth;
+  overscroll-behavior-y: contain;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
 #scroller::-webkit-scrollbar { width: 0; height: 0; }
 
@@ -73,6 +78,18 @@ button, input { font: inherit; color: inherit; }
     linear-gradient(160deg, var(--bg1), var(--bg2));
   overflow: hidden;
   isolation: isolate;
+}
+
+/* اگر محتوای یک بخش از صفحه بلندتر شود، چفت‌شدنِ اجباری نمی‌گذارد کاربر
+   وسط آن بخش بایستد و مدام او را به ابتدای بخش پس می‌زند. JS در این حالت
+   کلاس is-free را می‌گذارد تا اسکرول آزاد شود. */
+#scroller.is-free { scroll-snap-type: y proximity; }
+#scroller.is-free .sec { scroll-snap-stop: normal; }
+
+/* روی صفحه‌های لمسی «ایست حتمی» باعث می‌شود عوض‌کردن جهتِ کشیدن انگشت
+   نادیده گرفته شود یا به بخش قبلی برگردد؛ چفت‌شدن می‌ماند، اجبارِ ایست نه. */
+@media (pointer: coarse) {
+  .sec { scroll-snap-stop: normal; }
 }
 
 /* حباب‌های تزئینی پس‌زمینه */
@@ -848,11 +865,11 @@ body.page-plain {
 /* روی نمایشگرهای کوتاه، اسکرول داخل بخش آزاد باشد */
 @media (max-height: 620px) {
   #scroller { scroll-snap-type: y proximity; }
-  .sec { min-height: auto; padding-block: calc(var(--head-h) + 26px) 42px; }
+  .sec { min-height: auto; scroll-snap-stop: normal; padding-block: calc(var(--head-h) + 26px) 42px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html, #scroller { scroll-behavior: auto; }
+  html { scroll-behavior: auto; }
   *, *::before, *::after {
     animation-duration: .01ms !important; animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
