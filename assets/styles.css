@@ -836,6 +836,74 @@ body.page-plain.topic-page {
   background: linear-gradient(140deg, var(--a), var(--b));
 }
 
+/* تمرین‌های پلکانی؛ هر کارت یک پله است.
+   سطح دشواری فقط یک جا اعلام می‌شود (کلاس drill--lN روی خودِ کارت) و
+   نقطه‌های نوار دشواری از همان‌جا پر می‌شوند تا شماره و نوار هرگز ناهماهنگ نشوند.
+   شماره‌ی پله هم مثل .steps با شمارنده‌ی فارسی ساخته می‌شود */
+.drills {
+  display: grid; gap: 12px; counter-reset: drill;
+  margin: 0 0 14px; padding: 0; list-style: none;
+}
+.drill {
+  position: relative; padding: 15px 62px 15px 18px;
+  background: #fff; border: 1px solid var(--line); border-radius: 20px;
+}
+.drill::before {
+  counter-increment: drill; content: counter(drill, persian);
+  position: absolute; right: 14px; top: 15px;
+  width: 34px; height: 34px; border-radius: 12px;
+  display: grid; place-items: center; font-size: 15px; font-weight: 900; color: #fff;
+  background: linear-gradient(140deg, var(--a), var(--b));
+}
+
+.drill__top { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+/* min-width صفر لازم است تا در عرض کم، عنوان بشکند و نوار دشواری
+   در همان سطرِ عنوان بماند به‌جای اینکه به سطر بعد بیفتد */
+.drill__id { flex: 1 1 auto; min-width: 0; }
+.drill__id h3 { font-size: 17px; margin: 0; }
+
+/* برچسب متنی سطح؛ ویژگی‌گر با .tsec بالا می‌رود تا اندازه‌ی قلمِ «.tsec p» را رد کند */
+.tsec .drill__tag {
+  display: inline-block; margin: 3px 0 0; padding: 2px 11px;
+  border-radius: 999px; font-size: 12px; font-weight: 800; line-height: 1.8;
+  color: color-mix(in srgb, var(--a) 70%, var(--ink));
+  background: color-mix(in srgb, var(--a) 13%, #fff);
+}
+
+/* نوار دشواری تزئینی است (aria-hidden)؛ معنایش را برچسب متنی سطح می‌رساند */
+.drill__meter { display: flex; gap: 5px; flex: 0 0 auto; }
+.drill__meter i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+.drill--l1 .drill__meter i:nth-child(-n+1),
+.drill--l2 .drill__meter i:nth-child(-n+2),
+.drill--l3 .drill__meter i:nth-child(-n+3),
+.drill--l4 .drill__meter i:nth-child(-n+4),
+.drill--l5 .drill__meter i { background: linear-gradient(140deg, var(--a), var(--b)); }
+
+.drill__how { margin: 0 0 10px; }
+
+.drill__meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; padding: 0; list-style: none; }
+.drill__meta li {
+  padding: 4px 11px; border-radius: 999px;
+  background: color-mix(in srgb, var(--a) 6%, #fff);
+  border: 1px solid color-mix(in srgb, var(--a) 18%, transparent);
+  font-size: 12.3px; line-height: 1.8; color: var(--ink-soft);
+}
+.drill__meta li b { color: var(--ink); font-weight: 800; }
+
+/* نشانه‌ی پایان پله: همان چیزی که می‌گوید کِی می‌شود یک پله بالاتر رفت */
+.tsec .drill__next {
+  margin: 0; padding: 9px 13px; border-radius: 14px;
+  background: color-mix(in srgb, var(--b) 17%, #fff);
+  font-size: 13.2px; line-height: 1.85; color: var(--ink-soft);
+}
+.drill__next b { color: var(--ink); font-weight: 800; }
+
+.tsec .drills__note {
+  margin: 0; padding: 12px 15px; border-radius: 16px;
+  border: 1px dashed color-mix(in srgb, var(--a) 30%, transparent);
+  font-size: 13.4px; line-height: 1.9; color: var(--ink-soft);
+}
+
 .topic__cta {
   margin-top: clamp(18px, 2.8vw, 26px); text-align: center;
   border-radius: var(--radius); padding: clamp(24px, 3.4vw, 38px) clamp(18px, 3vw, 30px);
@@ -878,6 +946,16 @@ body.page-plain.topic-page {
   .tlist li::before { width: 23px; height: 23px; top: 11px; right: 11px; font-size: 12px; }
   .steps li { padding: 11px 48px 11px 13px; }
   .steps li::before { width: 27px; height: 27px; top: 10px; right: 11px; font-size: 13px; }
+  .drills { gap: 10px; }
+  .drill { padding: 13px 52px 13px 14px; border-radius: 18px; }
+  .drill::before { width: 29px; height: 29px; right: 12px; top: 13px; font-size: 13.5px; border-radius: 10px; }
+  .drill__top { gap: 8px; margin-bottom: 8px; }
+  .drill__id h3 { font-size: 15.5px; }
+  .tsec .drill__tag { font-size: 11.3px; padding: 1px 9px; }
+  .drill__meter i { width: 8px; height: 8px; }
+  .drill__meta li { font-size: 11.6px; padding: 3px 9px; }
+  .tsec .drill__next { font-size: 12.6px; padding: 8px 11px; border-radius: 12px; }
+  .tsec .drills__note { font-size: 12.7px; padding: 10px 12px; border-radius: 14px; }
   .topic__cta { padding: 22px 16px; border-radius: 20px; }
   .topic__nav { grid-template-columns: 1fr; }
   .tnav--next { text-align: right; }
