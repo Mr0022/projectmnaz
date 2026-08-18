@@ -117,9 +117,8 @@ button, input { font: inherit; color: inherit; }
 
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
 .brand__mark {
-  width: 42px; height: 42px; display: grid; place-items: center;
-  font-size: 20px; border-radius: 14px;
-  background: linear-gradient(140deg, var(--a), var(--b));
+  width: 42px; height: 42px; display: block; flex: none;
+  border-radius: 14px;
   box-shadow: var(--shadow-sm);
   transition: transform .35s cubic-bezier(.34, 1.56, .64, 1);
 }
@@ -367,6 +366,10 @@ button, input { font: inherit; color: inherit; }
 .end-wrap h2 { font-size: clamp(24px, 4.4vw, 46px); }
 .end-wrap > p { color: var(--ink-soft); max-width: 55ch; margin-inline: auto; }
 .contact { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 22px 0 18px; }
+.end-logo {
+  display: block; width: min(260px, 62vw); height: auto;
+  margin: 0 auto 14px;
+}
 .sign { font-size: 15px; color: var(--ink-soft); margin-bottom: 18px; }
 .sign b { color: var(--a); }
 
