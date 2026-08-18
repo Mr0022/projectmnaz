@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="kidswellhub">
+  <rect x="2" y="2" width="96" height="96" rx="26" fill="#16645C"></rect>
+  <path d="M36 25 L36 75" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" fill="none"></path>
+  <path d="M37 53 L61 75" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" fill="none"></path>
+  <path d="M37 53 L59 31" stroke="#34A46E" stroke-width="9" stroke-linecap="round" fill="none"></path>
+  <circle cx="62" cy="28" r="6.5" fill="#34A46E"></circle>
+</svg>
