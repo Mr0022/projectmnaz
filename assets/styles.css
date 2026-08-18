@@ -962,6 +962,171 @@ body.page-plain.topic-page {
   .topic__sign { margin-top: 20px; font-size: 13px; }
 }
 
+/* ---------------- صفحه‌ی بازی تعاملی ---------------- */
+
+/* پیوند بازی روی کارت هر تمرین در صفحه‌ی دست‌ورزی */
+.drill__play {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin-top: 10px; padding: 7px 15px; border-radius: 999px;
+  text-decoration: none; font-size: 12.6px; font-weight: 800;
+  color: color-mix(in srgb, var(--a) 74%, #000 26%);
+  background: color-mix(in srgb, var(--a) 10%, #fff);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--a) 28%, transparent);
+  transition: transform .25s cubic-bezier(.34, 1.56, .64, 1), box-shadow .25s ease, background .25s ease;
+}
+.drill__play:hover, .drill__play:focus-visible {
+  transform: translateX(-4px); background: #fff;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--a) 58%, transparent), var(--shadow-sm);
+}
+.drill__play i { font-style: normal; }
+
+.gwrap { margin-bottom: clamp(14px, 2.2vw, 20px); }
+.ghow {
+  color: var(--ink-soft); font-size: 14.2px; line-height: 1.9;
+  margin: 0 0 12px; text-align: center; text-wrap: balance;
+}
+
+.gpanel {
+  background: rgba(255, 255, 255, .8);
+  border: 1px solid rgba(255, 255, 255, .9);
+  border-radius: var(--radius);
+  padding: clamp(14px, 2.4vw, 22px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* میدان بازی؛ touch-action خاموش است تا کشیدن انگشت صفحه را اسکرول نکند */
+.gstage {
+  position: relative; overflow: hidden;
+  height: clamp(270px, 44vh, 350px);
+  border-radius: 20px; border: 1px solid var(--line);
+  background: linear-gradient(180deg, #fff, color-mix(in srgb, var(--b) 12%, #fff));
+  touch-action: none; user-select: none; -webkit-user-select: none;
+}
+
+/* ۱ | گلوله و سبد */
+.gbasket {
+  position: absolute; top: 14px; left: 50%;
+  transform: translateX(-50%) scale(var(--s, 1));
+  transform-origin: 50% 0;
+  width: 104px; height: 84px; border-radius: 18px;
+  display: grid; place-items: center; font-size: 42px; line-height: 1;
+  background: color-mix(in srgb, var(--a) 9%, #fff);
+  border: 3px dashed color-mix(in srgb, var(--a) 45%, transparent);
+  transition: transform .3s cubic-bezier(.34, 1.56, .64, 1);
+}
+.gball {
+  position: absolute; width: 54px; height: 54px; padding: 0;
+  border: 1px solid var(--line); border-radius: 50%;
+  background: #fff; box-shadow: var(--shadow-sm);
+  font-size: 26px; line-height: 1; cursor: grab;
+  touch-action: none; transition: opacity .3s ease, transform .3s ease;
+}
+.gball.is-drag { cursor: grabbing; transform: scale(1.12); box-shadow: var(--shadow-md); z-index: 3; }
+.gball.is-done { opacity: 0; transform: scale(.3); pointer-events: none; }
+
+/* ۲ | گیره و نوار رنگی */
+.gstage--clips { display: flex; flex-direction: column; justify-content: space-between; padding: 18px 12px; }
+.gslots { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.gslot {
+  width: 60px; height: 84px; border-radius: 16px;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--c) 12%, #fff);
+  border: 2px dashed color-mix(in srgb, var(--c) 60%, transparent);
+}
+.gslot.is-full { border-style: solid; background: color-mix(in srgb, var(--c) 20%, #fff); }
+.gtray { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+.gclip {
+  position: relative; width: 32px; height: 68px; padding: 0;
+  border: 0; border-radius: 999px; cursor: grab; touch-action: none;
+  background: linear-gradient(160deg, var(--c), color-mix(in srgb, var(--c) 62%, #000 12%));
+  box-shadow: var(--shadow-sm);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+/* شکاف میانی، تا گیره شبیه گیره‌ی لباس دیده شود */
+.gclip::after {
+  content: ""; position: absolute; inset: 16px 46% 16px 46%;
+  background: rgba(255, 255, 255, .75); border-radius: 999px;
+}
+/* هنگام کشیدن، ترابری نرم خاموش است: با آن روشن، مستطیل گیره در لحظه‌ی
+   رها کردن هنوز وسط انیمیشن بود و رهاکردن سریع روی نوار درست هم
+   بی‌اثر می‌ماند. حالا گیره دقیقاً زیر انگشت می‌ماند. */
+.gclip.is-drag { cursor: grabbing; box-shadow: var(--shadow-md); z-index: 5; transition: none; }
+.gclip.is-done { cursor: default; width: 28px; height: 60px; }
+.gclip.is-shake { animation: gshake .4s ease; }
+@keyframes gshake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+/* ۳ تا ۵ | بوم */
+.gcanvas {
+  display: block; width: 100%; height: clamp(260px, 42vh, 340px);
+  border-radius: 20px; border: 1px solid var(--line);
+  background: linear-gradient(180deg, #fff, color-mix(in srgb, var(--b) 10%, #fff));
+  touch-action: none; cursor: crosshair;
+}
+.gcanvas--tall { height: clamp(300px, 54vh, 430px); }
+.gcanvas--sq { height: auto; aspect-ratio: 1; }
+
+.gduo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.gduo__side { margin: 0; }
+.gduo__side figcaption {
+  font-size: 12.5px; font-weight: 800; color: var(--ink-soft);
+  text-align: center; margin-bottom: 6px;
+}
+
+/* نوار وضعیت و امتیاز */
+.gbar {
+  display: flex; flex-wrap: wrap; gap: 6px 14px;
+  justify-content: space-between; align-items: baseline; margin-top: 12px;
+}
+.gbar p { margin: 0; }
+.gbar__state { font-size: 13.4px; font-weight: 700; color: var(--ink-soft); }
+.gbar__score { font-size: 13.4px; font-weight: 800; color: color-mix(in srgb, var(--a) 78%, var(--ink)); }
+
+.gdone {
+  display: grid; gap: 3px; margin-top: 12px;
+  padding: 13px 16px; border-radius: 16px; text-align: center;
+  background: linear-gradient(140deg, color-mix(in srgb, var(--a) 14%, #fff), color-mix(in srgb, var(--b) 26%, #fff));
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--a) 22%, transparent);
+}
+/* بدون این قاعده، display بالا صفت hidden را بی‌اثر می‌کرد */
+.gdone[hidden] { display: none; }
+.gdone b { font-size: 15.5px; font-weight: 900; }
+.gdone span { font-size: 13.2px; color: var(--ink-soft); line-height: 1.8; }
+
+.gbtns { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 14px; }
+
+.tsec .gnote {
+  margin: 0; padding: 11px 14px; border-radius: 14px;
+  border: 1px dashed color-mix(in srgb, var(--a) 30%, transparent);
+  font-size: 13.2px; line-height: 1.85; color: var(--ink-soft);
+}
+
+@media (max-width: 760px) {
+  .drill__play { margin-top: 9px; padding: 6px 13px; font-size: 11.8px; }
+  .drill__play:hover { transform: none; }
+  .ghow { font-size: 13.2px; margin-bottom: 10px; }
+  .gpanel { padding: 12px; border-radius: 20px; }
+  .gstage { height: clamp(240px, 40vh, 300px); border-radius: 18px; }
+  .gbasket { width: 88px; height: 72px; font-size: 34px; }
+  .gball { width: 48px; height: 48px; font-size: 23px; }
+  .gslot { width: 48px; height: 70px; border-radius: 13px; }
+  .gtray { gap: 11px; }
+  .gclip { width: 27px; height: 58px; }
+  .gcanvas { height: clamp(230px, 38vh, 290px); border-radius: 18px; }
+  .gcanvas--tall { height: clamp(270px, 48vh, 360px); }
+  .gduo { gap: 8px; }
+  .gduo__side figcaption { font-size: 11.5px; }
+  .gbar { margin-top: 10px; }
+  .gbar__state, .gbar__score { font-size: 12.4px; }
+  .gdone { padding: 11px 13px; border-radius: 14px; }
+  .gdone b { font-size: 14.2px; }
+  .gdone span { font-size: 12.4px; }
+  .tsec .gnote { font-size: 12.5px; padding: 10px 12px; }
+}
+
 /* ---------------- انیمیشن ورود ---------------- */
 
 .reveal {
