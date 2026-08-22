@@ -962,6 +962,120 @@ body.page-plain.topic-page {
   .topic__sign { margin-top: 20px; font-size: 13px; }
 }
 
+/* ---------------- صفحه‌ی درباره‌ی ما ---------------- */
+
+/* معرفی: عکس کنار متن؛ در عرض کم عکس بالا می‌رود و متن وسط‌چین می‌شود */
+.about__hero {
+  display: grid;
+  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  gap: clamp(20px, 3.4vw, 40px);
+  align-items: center;
+  margin-bottom: clamp(24px, 4vw, 38px);
+}
+
+.about__photo {
+  margin: 0;
+  position: relative;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--a) 16%, #fff), color-mix(in srgb, var(--b) 34%, #fff));
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(255, 255, 255, .9);
+}
+/* نوار رنگی پایین قاب، هم‌خانواده‌ی کارت‌های دیگر */
+.about__photo::after {
+  content: ""; position: absolute; inset: auto 0 0 0; height: 6px;
+  background: linear-gradient(90deg, var(--a), var(--b));
+}
+.about__photo img {
+  display: block; width: 100%; height: auto;
+  aspect-ratio: 1 / 1; object-fit: cover; object-position: 50% 22%;
+}
+
+.about__intro h1 { font-size: clamp(28px, 4.6vw, 44px); margin-bottom: .15em; }
+
+.about__role {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px;
+  font-size: clamp(15px, 1.7vw, 18px); font-weight: 800;
+  color: color-mix(in srgb, var(--a) 72%, #000 28%);
+  margin: 0 0 .7em;
+}
+
+.about__lead {
+  color: var(--ink-soft); font-size: clamp(14.5px, 1.5vw, 17px);
+  margin: 0 0 18px; max-width: 54ch;
+}
+
+/* عددهای کوتاه معرفی؛ هر خانه یک عدد و یک توضیح */
+.about__stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px; margin: 0 0 20px; padding: 0; list-style: none;
+}
+.about__stats li {
+  background: rgba(255, 255, 255, .82);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 12px 14px;
+  text-align: center;
+}
+.about__stats b {
+  display: block; font-size: clamp(21px, 2.6vw, 27px); font-weight: 900; line-height: 1.4;
+  background: linear-gradient(120deg, var(--a), color-mix(in srgb, var(--b) 70%, var(--a)));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.about__stats span {
+  display: block; font-size: 12.6px; line-height: 1.75; color: var(--ink-soft);
+  text-wrap: balance;
+}
+
+/* دکمه‌ها در معرفی از لبه‌ی متن شروع می‌شوند، نه وسط */
+.contact--start { justify-content: flex-start; margin: 0; }
+
+/* حوزه‌های تخصصی */
+.about__areas {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+  gap: clamp(12px, 1.8vw, 16px);
+  margin-top: 16px;
+}
+.acard {
+  position: relative; overflow: hidden;
+  background: #fff; border: 1px solid var(--line); border-radius: 20px;
+  padding: clamp(16px, 2.2vw, 22px);
+  transition: transform .3s cubic-bezier(.34, 1.56, .64, 1), box-shadow .3s ease;
+}
+.acard:hover { transform: translateY(-4px); box-shadow: var(--shadow-sm); }
+.acard__ico {
+  display: grid; place-items: center;
+  width: 50px; height: 50px; border-radius: 17px; font-size: 24px; margin-bottom: 10px;
+  background: linear-gradient(140deg, color-mix(in srgb, var(--a) 20%, #fff), color-mix(in srgb, var(--b) 42%, #fff));
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--a) 20%, transparent);
+}
+.acard h3 { font-size: 17px; margin: 0 0 .45em; }
+/* ویژگی‌گر با .tsec بالا می‌رود تا اندازه‌ی قلمِ «.tsec p» را رد کند */
+.tsec .acard p { font-size: 13.6px; line-height: 1.9; color: var(--ink-soft); margin: 0; }
+
+@media (max-width: 860px) {
+  .about__hero { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .about__photo { width: min(260px, 72vw); }
+  .about__role { justify-content: center; }
+  .about__lead { margin-inline: auto; }
+  .contact--start { justify-content: center; }
+}
+
+@media (max-width: 760px) {
+  .about__hero { gap: 18px; margin-bottom: 20px; }
+  .about__photo { width: min(210px, 60vw); border-radius: 22px; }
+  .about__stats { grid-template-columns: 1fr; gap: 8px; }
+  .about__stats li { display: flex; align-items: baseline; justify-content: center; gap: 8px; padding: 9px 12px; }
+  .about__stats b { font-size: 19px; }
+  .about__stats span { font-size: 12.2px; }
+  .about__areas { grid-template-columns: 1fr; }
+  .acard { padding: 15px 14px; border-radius: 18px; }
+  .acard__ico { width: 44px; height: 44px; font-size: 21px; border-radius: 14px; }
+  .acard h3 { font-size: 15.5px; }
+  .tsec .acard p { font-size: 13px; }
+}
+
 /* ---------------- صفحه‌ی بازی تعاملی ---------------- */
 
 /* پیوند بازی روی کارت هر تمرین در صفحه‌ی دست‌ورزی */
